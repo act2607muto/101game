@@ -3,14 +3,14 @@
 トランプゲーム「101」のオンライン対戦版。各自のスマホで2〜6人対戦できます。
 
 ## 遊び方
-1. `index.html` を開く（GitHub Pages で公開すると全員が同じURLで遊べます）
+1. https://play101game.vercel.app/ を開く
 2. 1人が「部屋をつくる」→ 表示された4桁コードを共有
 3. 他の人は「コードで参加する」からコードを入力
 4. ホストが「ゲームを始める」
 
-## GitHub Pages で公開
-Settings → Pages → Source: `Deploy from a branch` → Branch: `main` / `(root)` → Save
-数分後 `https://act2607muto.github.io/101game/` で遊べます。
+## 公開
+Vercel（https://play101game.vercel.app/）で公開しています。`main` に入れると自動で反映されます。
+以前の GitHub Pages の URL（`https://act2607muto.github.io/101game/`）を開くと、招待リンクの `?join=` も含めて Vercel に転送されます。
 
 ## ファイル構成
 - `index.html` … 画面とゲームのコード
@@ -29,7 +29,7 @@ Settings → Pages → Source: `Deploy from a branch` → Branch: `main` / `(roo
 
 ## Firebase の設定
 セキュリティルールは `database.rules.json` にあります。設定は次の順番で行ってください（順番を逆にすると、古いページが動かなくなります）。
-1. この版を `main` に入れて、GitHub Pages に反映されたことを確認する
+1. この版を `main` に入れて、公開ページに反映されたことを確認する
 2. Firebase コンソール → Authentication → ログイン方法 →「匿名」を有効にする
 3. Realtime Database → ルール に `database.rules.json` の中身を貼り付けて「公開」する
 
