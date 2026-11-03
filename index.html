@@ -580,7 +580,7 @@ function signInFB(){
   const auth=addFB('firebase-auth-compat.js').then(()=>{const a=window.firebase.auth();return a.setPersistence(window.firebase.auth.Auth.Persistence.NONE).then(()=>a.signInAnonymously());}).then(c=>c.user.uid);
   return Promise.race([auth,new Promise((ok,ng)=>setTimeout(()=>ng('timeout'),8000))]).catch(e=>{console.warn('firebase auth',e&&e.code||e);return null;});
 }
-// everyone can read `state`, so hands, the deck order and a drawn card awaiting a choice are left out of it; each guest gets theirs under hands/<id>
+// everyone can read `state`, so hands, the deck order and a drawn card awaiting a choice are left out of it; each guest gets theirs under hands101/<room>/<id>, outside rooms101 so the sweep query cannot reach them
 function splitState(g){
   const players=g.players||[];
   const pub={...g,deck:[],deckCount:g.deck?g.deck.length:0,pending:g.pending?{hidden:true}:null,players:players.map(p=>({...p,hand:[],handCount:p.hand?p.hand.length:0}))};
@@ -631,6 +631,9 @@ class Component extends DCLogic {
   }
   room(){return this.state.g?this.state.g.room:this.state.code;}
   fbRef(p){return this.db.ref('rooms101/'+p);}
+  handRef(room,id){return this.db.ref('hands101/'+room+(id?'/'+id:''));}
+  // hands first: the rules decide whether they may go by looking at the room
+  removeRoom(room,strict){const p=this.handRef(room).remove().then(()=>this.fbRef(room).remove());return strict?p:p.catch(()=>{});}
   post(m){
     const msg={room:this.room(),...m};
     if(!this.db){this.ch&&this.ch.postMessage(msg);return;}
@@ -638,7 +641,7 @@ class Component extends DCLogic {
     if(msg.t==='state'){
       if(this.state.role==='host'&&!this.ready)return;
       const {pub,priv}=splitState(msg.g);
-      for(const id in priv){const hj=JSON.stringify(priv[id]);if(this.lastH[id]===hj)continue;this.lastH[id]=hj;this.fbRef(r+'/hands/'+id).set({j:hj}).catch(e=>console.error('fb hand',e));}
+      for(const id in priv){const hj=JSON.stringify(priv[id]);if(this.lastH[id]===hj)continue;this.lastH[id]=hj;this.handRef(r,id).set({j:hj}).catch(e=>console.error('fb hand',e));}
       const j=JSON.stringify(pub);if(j===this.lastJ)return;this.lastJ=j;
       this.fbRef(r+'/state').set({j,ts:Date.now()}).catch(e=>console.error('fb state',e));
     } else this.fbRef(r+'/msgs').push({j:JSON.stringify(msg),from:this.me}).catch(e=>console.error('fb msg',e));
@@ -649,7 +652,7 @@ class Component extends DCLogic {
     (this.presRefs||[]).forEach(r=>{try{r.onDisconnect().cancel();r.remove();}catch(e){}});this.presRefs=[];
     this.pres=null;this.away={};this.seen={};this.conn=false;
     clearInterval(this.hb);this.ready=false;this.lastJ=null;this.lastH={};this.pub=null;this.hand=null;
-    if(this.hostRoom&&this.db){const r=this.fbRef(this.hostRoom);setTimeout(()=>r.remove().catch(()=>{}),2500);}
+    if(this.hostRoom&&this.db){const r=this.hostRoom;setTimeout(()=>this.removeRoom(r),2500);}
     this.hostRoom=null;
   }
   listen(room,asHost,startKey){
@@ -659,9 +662,9 @@ class Component extends DCLogic {
     q.on('child_added',onAdd);this.offs.push(()=>q.off('child_added',onAdd));
     if(!asHost){
       const st=this.fbRef(room+'/state');
-      const onSt=snap=>{const v=snap.val();if(!v)return;try{this.pub=JSON.parse(v.j);}catch(e){return;}this.onMsg({room,t:'state',g:this.mergeState()});};
+      const onSt=snap=>{const v=snap.val();if(!v)return;let pub;try{pub=JSON.parse(v.j);}catch(e){return;}if(!pub||!Array.isArray(pub.players))return;this.pub=pub;this.onMsg({room,t:'state',g:this.mergeState()});};
       st.on('value',onSt);this.offs.push(()=>st.off('value',onSt));
-      const hd=this.fbRef(room+'/hands/'+this.me);
+      const hd=this.handRef(room,this.me);
       const onHd=snap=>{const v=snap.val();if(!v)return;try{this.hand=JSON.parse(v.j);}catch(e){return;}if(this.pub)this.onMsg({room,t:'state',g:this.mergeState()});};
       hd.on('value',onHd);this.offs.push(()=>hd.off('value',onHd));
       const hb=this.fbRef(room+'/hb');
@@ -684,23 +687,25 @@ class Component extends DCLogic {
       pr.on('value',onPr);this.offs.push(()=>pr.off('value',onPr));
     }
   }
-  startHost(room){
+  startHost(room,tries=0){
     this.killPeer();this.setState({net:'wait'});
     this.dbP.then(db=>{
       if(!db){this.setState({net:'off'});return;}
       if(!this.state.g||this.state.g.room!==room||this.state.role!=='host')return;
       const startKey=this.fbRef(room+'/msgs').push().key;
-      return this.fbRef(room+'/state').once('value').then(snap=>{
-        const v=snap.val();let other=false;
-        if(v){try{const og=JSON.parse(v.j);other=og.hostId!==this.me&&Date.now()-(v.ts||0)<6*3600e3;}catch(e){}}
-        if(other&&this.state.g.status==='lobby'){const r=String(Math.floor(1000+Math.random()*9000));const g=clone(this.state.g);g.room=r;this.setState({g},()=>this.startHost(r));return;}
-        return this.fbRef(room).remove().then(()=>{
+      // another code if this one belongs to a host seen in the last 6 hours, or the database rules refuse to clear it
+      const retry=()=>{if(tries>=3){this.setState({net:'off'});return;}const r=String(Math.floor(1000+Math.random()*9000));const g=clone(this.state.g);g.room=r;this.setState({g},()=>this.startHost(r,tries+1));};
+      return this.fbRef(room+'/hb').once('value').then(snap=>{
+        const hb=snap.val();
+        if(hb&&Date.now()-hb<6*3600e3&&this.state.g.status==='lobby')return retry();
+        return this.removeRoom(room,true).then(()=>this.fbRef(room+'/host').set(this.me)).then(()=>{
           this.hostRoom=room;
+          // hb goes first so the sweep never mistakes a room being set up for an abandoned one
+          const beat=()=>this.fbRef(room+'/hb').set(firebase.database.ServerValue.TIMESTAMP).catch(()=>{});beat();this.hb=setInterval(beat,2000);
           this.listen(room,true,startKey);this.ready=true;this.setState({net:'ok'});
           this.post({t:'state',g:this.state.g});
-          const beat=()=>this.fbRef(room+'/hb').set(Date.now()).catch(()=>{});beat();this.hb=setInterval(beat,2000);
           this.sweep();
-        });
+        },e=>{console.warn('fb host room',room,e&&e.code||e);retry();});
       });
     }).catch(e=>{console.error('fb host',e);this.setState({net:'off'});});
   }
@@ -714,10 +719,11 @@ class Component extends DCLogic {
     }).catch(e=>{console.error('fb guest',e);this.setState({joining:false,role:null,err:'通信エラーが発生しました'});});
   }
   // a host that vanished without leaving leaves its room behind for good, so each new host clears out rooms idle for a day
+  // (the database rules only allow this exact query, so its shape must stay in step with database.rules.json)
   sweep(){
     const cut=Date.now()-864e5;
     this.db.ref('rooms101').orderByChild('hb').endAt(cut).limitToFirst(20).once('value').then(snap=>{
-      snap.forEach(c=>{const v=c.val()||{};if(!(v.state&&v.state.ts>cut))c.ref.remove().catch(()=>{});});
+      snap.forEach(c=>{const v=c.val()||{};if(!(v.state&&v.state.ts>cut))this.removeRoom(c.key);});
     }).catch(()=>{});
   }
   // guest side: the public state plus this player's own hand; `synced` is false while the two come from different host commits
@@ -814,7 +820,7 @@ class Component extends DCLogic {
   };
   leave=(silent)=>{
     const s=this.state;if(!s.role)return;
-    if(s.role==='host'){this.post({t:'closed'});if(silent===true&&this.db&&this.hostRoom)this.fbRef(this.hostRoom).onDisconnect().remove();}
+    if(s.role==='host'){this.post({t:'closed'});if(silent===true&&this.db&&this.hostRoom){this.handRef(this.hostRoom).onDisconnect().remove();this.fbRef(this.hostRoom).onDisconnect().remove();}}
     else this.post({t:'leave',id:this.me});
     setTimeout(()=>this.killPeer(),300);
     if(silent!==true)this.setState({phase:'home',g:null,role:null,err:''});

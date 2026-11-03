@@ -21,9 +21,16 @@ Settings → Pages → Source: `Deploy from a branch` → Branch: `main` / `(roo
 フォントは Google Fonts から読み込みます。
 
 ## Firebase のデータ
-`rooms101/<ルームコード>/` の下に部屋ごとのデータを置きます。
-- `state` … 全員が見る場の情報（手札と山札の中身は入れない）
-- `hands/<プレイヤーID>` … ゲストそれぞれの手札
-- `msgs` / `pres` / `hb` … 参加・操作の連絡、接続状況、ホストの生存確認
+- `rooms101/<ルームコード>/` … 部屋ごとのデータ
+  - `host` … ホストのID
+  - `state` … 全員が見る場の情報（手札と山札の中身は入れない）
+  - `msgs` / `pres` / `hb` … 参加・操作の連絡、接続状況、ホストの生存確認
+- `hands101/<ルームコード>/<プレイヤーID>` … ゲストそれぞれの手札（本人だけが読める）
 
-Firebase の Authentication で「匿名」ログインを有効にすると、プレイヤーIDがログインのIDになります（無効のままでも遊べます）。
+## Firebase の設定
+セキュリティルールは `database.rules.json` にあります。設定は次の順番で行ってください（順番を逆にすると、古いページが動かなくなります）。
+1. この版を `main` に入れて、GitHub Pages に反映されたことを確認する
+2. Firebase コンソール → Authentication → ログイン方法 →「匿名」を有効にする
+3. Realtime Database → ルール に `database.rules.json` の中身を貼り付けて「公開」する
+
+ルールを入れると、ほかの人の手札を読む・場の情報を書き換える・ホストを乗っ取る・他人の部屋を消す、といった操作が拒否されます。
