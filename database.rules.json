@@ -1,0 +1,57 @@
+{
+  "rules": {
+    "rooms101": {
+      ".read": "auth != null && query.orderByChild == 'hb' && query.endAt != null && query.limitToFirst <= 20",
+      ".indexOn": [
+        "hb"
+      ],
+      "$room": {
+        ".validate": "$room.matches(/^[0-9]{4}$/)",
+        ".write": "auth != null && !newData.exists() && (!data.child('hb').exists() || data.child('hb').val() < now - 21600000 || data.child('host').val() === auth.uid)",
+        "host": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.val() === auth.uid && (!data.exists() || data.val() === auth.uid)"
+        },
+        "hb": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('rooms101/' + $room + '/host').val() === auth.uid",
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "state": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('rooms101/' + $room + '/host').val() === auth.uid",
+          ".validate": "newData.hasChildren(['j', 'ts']) && newData.child('j').isString() && newData.child('j').val().length < 20000 && newData.child('ts').isNumber()"
+        },
+        "msgs": {
+          ".read": "auth != null",
+          "$mid": {
+            ".write": "auth != null && !data.exists() && newData.child('from').val() === auth.uid",
+            ".validate": "newData.hasChildren(['j', 'from']) && newData.child('j').isString() && newData.child('j').val().length < 2000"
+          }
+        },
+        "pres": {
+          ".read": "auth != null",
+          "$pid": {
+            "$conn": {
+              ".write": "auth != null && auth.uid === $pid",
+              ".validate": "newData.isBoolean()"
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "hands101": {
+      "$room": {
+        ".write": "auth != null && !newData.exists() && (!root.child('rooms101/' + $room + '/hb').exists() || root.child('rooms101/' + $room + '/hb').val() < now - 21600000 || root.child('rooms101/' + $room + '/host').val() === auth.uid)",
+        "$pid": {
+          ".read": "auth != null && auth.uid === $pid",
+          ".write": "auth != null && root.child('rooms101/' + $room + '/host').val() === auth.uid",
+          ".validate": "$room.matches(/^[0-9]{4}$/) && newData.hasChildren(['j']) && newData.child('j').isString() && newData.child('j').val().length < 5000"
+        }
+      }
+    }
+  }
+}
