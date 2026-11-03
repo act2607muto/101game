@@ -17,9 +17,20 @@ if(location.hostname==='act2607muto.github.io')location.replace('https://play101
 <meta property="og:image" content="https://play101game.vercel.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="101">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+if('serviceWorker' in navigator&&location.hostname!=='act2607muto.github.io')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+// Chrome offers installing only through this event, which can fire before the game has mounted, so it is kept for later
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e;dispatchEvent(new Event('bip'));});
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Lora:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&family=Noto+Serif+JP:wght@400;600&display=swap">
+<link rel="stylesheet" crossorigin href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Lora:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&family=Noto+Serif+JP:wght@400;600&display=swap">
 <script src="js/vendor/react.production.min.js"></script>
 <script src="js/vendor/react-dom.production.min.js"></script>
 <script src="js/dc-runtime.js"></script>
@@ -307,6 +318,8 @@ button:disabled{opacity:.45;cursor:not-allowed;}
     <button sc-camel-on-click="{{ create }}" style="height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);" style-active="background:rgba(225,173,102,.22);">部屋をつくる</button>
     <button sc-camel-on-click="{{ toJoin }}" style="height:54px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:16px;cursor:pointer;" style-hover="background:rgba(243,242,242,.07);">コードで参加する</button>
     <button sc-camel-on-click="{{ openRules }}" style="height:44px;border:0;background:transparent;color:#b9b4b2;font:inherit;font-size:14px;cursor:pointer;">ルールを見る</button>
+    <sc-if value="{{ canInstall }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ install }}" style="height:44px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:14px;cursor:pointer;">ホーム画面に追加</button></sc-if>
+    <sc-if value="{{ iosHint }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;font-size:12px;line-height:1.7;color:#b9b4b2;">Safari の共有ボタン →「ホーム画面に追加」で、<br>アプリのように全画面で遊べます</div></sc-if>
   </div>
 </div>
 </sc-if>
@@ -608,11 +621,12 @@ class Component extends DCLogic {
     this.tick=setInterval(()=>{if(this.state.role==='host'&&this.state.g){this.checkAway();this.post({t:'state',g:this.state.g});}this.forceUpdate();},1500);
     // pagehide fires on mobile when the tab is closed, where beforeunload often does not
     this.unload=e=>{if(!e.persisted)this.leave(true);};window.addEventListener('pagehide',this.unload);
+    this.onBip=()=>this.forceUpdate();addEventListener('bip',this.onBip);addEventListener('appinstalled',this.onBip);
     this.onVis=()=>{this.wlFail=false;this.syncWake();};document.addEventListener('visibilitychange',this.onVis);
     // iPhone ignores navigator.vibrate, so the turn alert also beeps; audio may only start after a tap, hence the unlock here
     this.onTap=()=>{try{if(!this.ac)this.ac=new (window.AudioContext||window.webkitAudioContext)();if(this.ac.state!=='running')this.ac.resume();}catch(e){}};document.addEventListener('pointerdown',this.onTap);
   }
-  componentWillUnmount(){clearInterval(this.tick);clearTimeout(this.tt);clearTimeout(this.ta);clearTimeout(this.tb);clearTimeout(this.tc);window.removeEventListener('pagehide',this.unload);document.removeEventListener('visibilitychange',this.onVis);document.removeEventListener('pointerdown',this.onTap);this.ch&&this.ch.close();}
+  componentWillUnmount(){clearInterval(this.tick);clearTimeout(this.tt);clearTimeout(this.ta);clearTimeout(this.tb);clearTimeout(this.tc);window.removeEventListener('pagehide',this.unload);removeEventListener('bip',this.onBip);removeEventListener('appinstalled',this.onBip);document.removeEventListener('visibilitychange',this.onVis);document.removeEventListener('pointerdown',this.onTap);this.ch&&this.ch.close();}
   // keeps the screen on while in a room: a sleeping host phone stops the game for everyone, and a sleeping guest is dropped after AWAY_MS
   syncWake(){
     const want=this.state.phase==='room'&&document.visibilityState==='visible';
@@ -816,6 +830,7 @@ class Component extends DCLogic {
     }
     if(a.type==='choose'&&g.pending){const r=apply(g,g.pending.card,'deck',null,a.val);r.ev.notes=(g.pending.notes||[]).concat(r.ev.notes);return this.commit(r);}
   }
+  install=()=>{const e=window.__bip;if(!e)return;e.prompt();e.userChoice.catch(()=>{}).then(()=>{window.__bip=null;this.forceUpdate();});};
   // the OS share sheet where there is one (phones), otherwise copy the link
   invite=()=>{
     const u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('join',this.room());
@@ -838,6 +853,7 @@ class Component extends DCLogic {
     const meIdx=players.findIndex(p=>p.id===this.me),meP=players[meIdx];
     const playing=!!g&&g.status==='playing';
     const unsynced=!!g&&g.synced===false;
+    const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
     const myTurn=playing&&g.cur===meIdx;
     const curP=playing?players[g.cur]:null;
     const isHost=s.role==='host';
@@ -893,6 +909,8 @@ class Component extends DCLogic {
       resName:resP?resP.name:'',resIsMe:!!resP&&resP.id===this.me,abortWho:res&&res.who||'',
       winners:res&&res.kind==='lose'?players.filter((p,i)=>i!==res.idx).map(p=>p.name).join('・'):'',
       again:()=>this.act({type:'start'}),
+      canInstall:!!window.__bip&&!standalone,install:this.install,
+      iosHint:!standalone&&(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)),
       rules:s.rules,openRules:set({rules:true}),closeRules:set({rules:false})
     };
   }
