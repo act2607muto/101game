@@ -12,11 +12,20 @@
 Vercel（https://play101game.vercel.app/）で公開しています。`main` に入れると自動で反映されます。
 以前の GitHub Pages の URL（`https://act2607muto.github.io/101game/`）を開くと、招待リンクの `?join=` も含めて Vercel に転送されます。
 
+## ホーム画面に追加（PWA）
+- Android（Chrome）：ホーム画面の「ホーム画面に追加」ボタン、またはメニューの「アプリをインストール」
+- iPhone（Safari）：共有ボタン →「ホーム画面に追加」
+
+追加すると、アプリのように全画面で開けます。対戦には通信が必要です。
+
+`sw.js` を変えたときは、中の `CACHE` の名前（`101-v1` など）を新しくしてください。
+
 ## ファイル構成
 - `index.html` … 画面とゲームのコード
 - `js/dc-runtime.js` … 画面を描くための仕組み（Claude Design の書き出しに含まれていたもの。編集しない）
 - `js/vendor/` … React 18.3.1
 - `favicon.svg` / `og.png` … タブのアイコンと、リンクを共有したときの画像
+- `manifest.webmanifest` / `sw.js` / `icons/` … ホーム画面に追加（PWA）するための設定・オフライン用キャッシュ・アイコン
 
 フォントは Google Fonts から読み込みます。
 
