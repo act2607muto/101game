@@ -10,7 +10,7 @@
         ".write": "auth != null && !newData.exists() && (!data.child('hb').exists() || data.child('hb').val() < now - 21600000 || data.child('host').val() === auth.uid)",
         "host": {
           ".read": "auth != null",
-          ".write": "auth != null && newData.val() === auth.uid && (!data.exists() || data.val() === auth.uid)"
+          ".write": "auth != null && newData.isString() && ((!data.exists() && newData.val() === auth.uid) || data.val() === auth.uid || (newData.val() === auth.uid && root.child('rooms101/' + $room + '/hb').val() < now - 30000 && root.child('rooms101/' + $room + '/pres/' + auth.uid).exists()))"
         },
         "hb": {
           ".read": "auth != null",

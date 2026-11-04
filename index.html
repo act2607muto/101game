@@ -356,6 +356,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
     <sc-if value="{{ netOk }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-size:12px;color:#e1ad66;">● 他の端末から参加できます</div></sc-if>
     <sc-if value="{{ netWait }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-size:12px;color:#b9b4b2;">○ 他の端末との接続を準備中…</div></sc-if>
     <sc-if value="{{ netOff }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-size:12px;color:#facb8d;">他の端末との接続を準備できませんでした。再読み込みしてください</div></sc-if>
+    <sc-if value="{{ hasHandover }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-size:12px;color:#facb8d;">{{ handoverMsg }}</div></sc-if>
   </div>
   <div style="display:flex;flex-direction:column;">
     <div style="display:flex;justify-content:space-between;font-size:12px;color:#b9b4b2;padding-bottom:6px;"><span>参加者</span><span style="font-feature-settings:'tnum';">{{ lobbyCount }} / 6</span></div>
@@ -371,7 +372,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
     <button sc-camel-on-click="{{ invite }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">招待リンクを送る</button>
     <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;font-size:12px;color:#e1ad66;">リンクをコピーしました</div></sc-if>
-    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;line-height:1.7;color:#b9b4b2;">ホストのこの画面は開いたままにしてください。閉じたり別のアプリに切り替えたりすると、全員のゲームが止まります。</div></sc-if>
+    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;line-height:1.7;color:#b9b4b2;">ホストのこの画面は開いたままにしてください。閉じたり別のアプリに切り替えたりすると、全員のゲームが止まります。40秒以上戻らないと、次の人がホストを引き継ぎます。</div></sc-if>
     <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;line-height:1.7;color:#b9b4b2;">画面を閉じたまま90秒たつと、退出したあつかいになります。</div></sc-if>
     <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
       <button sc-camel-on-click="{{ start }}" disabled="{{ cantStart }}" style="height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">ゲームを始める</button>
@@ -391,7 +392,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
       <button sc-camel-on-click="{{ openRules }}" aria-label="ルール" style="width:44px;height:44px;border:0;background:transparent;color:#e1ad66;font-family:'Noto Sans JP',sans-serif;font-size:22px;cursor:pointer;">?</button>
     </div>
   </div>
-  <sc-if value="{{ lost }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 12px;border:1px solid #c28d41;border-radius:4px;font-size:12px;color:#facb8d;">ホストとの接続が途切れています…</div></sc-if>
+  <sc-if value="{{ lost }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 12px;border:1px solid #c28d41;border-radius:4px;font-size:12px;color:#facb8d;">ホストとの接続が途切れています… 40秒ほど戻らなければ、次の人がホストを引き継ぎます</div></sc-if>
   <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 2px;">
     <sc-for list="{{ seats }}" as="p" hint-placeholder-count="3">
       <div style="display:flex;align-items:center;gap:2px;">
@@ -504,6 +505,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
     <div style="font-size:22px;">{{ abortWho }} さんが退出しました</div>
     <div style="font-size:14px;color:#b9b4b2;">このゲームは無効になりました</div>
   </sc-if>
+  <sc-if value="{{ hasHandover }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#facb8d;">{{ handoverMsg }}</div></sc-if>
   <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin-top:20px;">
     <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ again }}" disabled="{{ cantStart }}" style="width:100%;height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">同じメンバーでもう一度</button></sc-if>
     <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="height:54px;display:grid;place-items:center;border:1px solid rgba(243,242,242,.16);border-radius:4px;color:#b9b4b2;font-size:15px;">ホストの再戦を待っています…</div></sc-if>
@@ -618,7 +620,7 @@ class Component extends DCLogic {
     this.dbP=loadFB().then(db=>db&&signInFB().then(uid=>{if(uid)this.me=uid;return db;})).then(db=>{this.db=db;return db;});
     this.ch=new BroadcastChannel('101-online');
     this.ch.onmessage=e=>this.onMsg(e.data);
-    this.tick=setInterval(()=>{if(this.state.role==='host'&&this.state.g){this.checkAway();this.post({t:'state',g:this.state.g});}this.forceUpdate();},1500);
+    this.tick=setInterval(()=>{if(this.state.role==='host'&&this.state.g){this.checkAway();this.post({t:'state',g:this.state.g});}else if(this.state.role==='guest')this.maybeTakeOver();this.forceUpdate();},1500);
     // pagehide fires on mobile when the tab is closed, where beforeunload often does not
     this.unload=e=>{if(!e.persisted)this.leave(true);};window.addEventListener('pagehide',this.unload);
     this.onBip=()=>this.forceUpdate();addEventListener('bip',this.onBip);addEventListener('appinstalled',this.onBip);
@@ -672,7 +674,7 @@ class Component extends DCLogic {
     this.pres=null;this.away={};this.seen={};this.conn=false;
     clearInterval(this.hb);this.ready=false;this.lastJ=null;this.lastH={};this.pub=null;this.hand=null;
     if(this.hostRoom&&this.db){const r=this.hostRoom;setTimeout(()=>this.removeRoom(r),2500);}
-    this.hostRoom=null;
+    this.hostRoom=null;this.taking=false;
   }
   listen(room,asHost,startKey){
     const msgs=this.fbRef(room+'/msgs');
@@ -690,6 +692,12 @@ class Component extends DCLogic {
       const onHb=snap=>{if(snap.val()&&this.state.phase==='room')this.setState({lastSeen:Date.now()});};
       hb.on('value',onHb);this.offs.push(()=>hb.off('value',onHb));
     }
+    // the host role can move to another player (leave, maybeTakeOver), so everyone follows rooms101/<room>/host
+    const hr=this.fbRef(room+'/host');
+    const onHost=snap=>{const v=snap.val();if(!v)return;
+      if(this.state.role==='guest'&&v===this.me&&!this.taking)this.promote();
+      else if(this.state.role==='host'&&v!==this.me&&!this.handingOver)this.demote(v);};
+    hr.on('value',onHost);this.offs.push(()=>hr.off('value',onHost));
     // presence: one child per live connection; re-registered on every reconnect
     const ci=this.db.ref('.info/connected');
     const onCi=snap=>{
@@ -718,15 +726,52 @@ class Component extends DCLogic {
         const hb=snap.val();
         if(hb&&Date.now()-hb<6*3600e3&&this.state.g.status==='lobby')return retry();
         return this.removeRoom(room,true).then(()=>this.fbRef(room+'/host').set(this.me)).then(()=>{
-          this.hostRoom=room;
-          // hb goes first so the sweep never mistakes a room being set up for an abandoned one
-          const beat=()=>this.fbRef(room+'/hb').set(firebase.database.ServerValue.TIMESTAMP).catch(()=>{});beat();this.hb=setInterval(beat,2000);
-          this.listen(room,true,startKey);this.ready=true;this.setState({net:'ok'});
-          this.post({t:'state',g:this.state.g});
+          this.beginHosting(room,startKey);
           this.sweep();
         },e=>{console.warn('fb host room',room,e&&e.code||e);retry();});
       });
     }).catch(e=>{console.error('fb host',e);this.setState({net:'off'});});
+  }
+  beginHosting(room,startKey){
+    this.hostRoom=room;
+    // hb goes first so the sweep never mistakes a room being set up for an abandoned one
+    const beat=()=>this.fbRef(room+'/hb').set(firebase.database.ServerValue.TIMESTAMP).catch(()=>{});beat();this.hb=setInterval(beat,2000);
+    this.listen(room,true,startKey);this.ready=true;this.setState({net:'ok'});
+    this.post({t:'state',g:this.state.g});
+  }
+  // a host silent for TAKE_MS (tab closed, battery dead) is replaced by the next player; later players wait longer so they rarely race,
+  // and the transaction settles it when they do. The rules only allow this once hb is 30s old.
+  maybeTakeOver(){
+    const s=this.state,g=s.g;if(!this.db||!g||s.phase!=='room'||this.taking||!s.lastSeen)return;
+    const TAKE_MS=40000,others=g.players.filter(p=>p.id!==g.hostId),rank=others.findIndex(p=>p.id===this.me);
+    if(rank<0||Date.now()-s.lastSeen<TAKE_MS+rank*5000)return;
+    this.taking=true;const old=g.hostId,room=g.room;
+    // applyLocally=false: promoting on the optimistic local value would clear this player's presence before the rules check it
+    this.fbRef(room+'/host').transaction(cur=>cur===old?this.me:undefined,undefined,false)
+      .then(r=>{if(r.committed)this.promote();},e=>console.warn('take over',e&&e.code||e))
+      .then(()=>setTimeout(()=>{this.taking=false;},5000));
+  }
+  // guest -> host. Guests never see the deck or the other hands, so a round in progress cannot go on and is called off.
+  promote(){
+    const pub=this.pub;if(this.state.role!=='guest'||!pub||!this.db)return;
+    const room=pub.room,name=id=>(pub.players.find(p=>p.id===id)||{}).name||'ゲスト',from=name(pub.hostId);
+    const g={room,hostId:this.me,status:pub.status==='playing'?'over':'lobby',players:pub.players.filter(p=>p.id!==pub.hostId).map(p=>({id:p.id,name:p.name,hand:[]})),ev:null,round:pub.round||0,v:pub.v||0,handover:{from,to:name(this.me)}};
+    if(pub.status==='playing')g.result={kind:'abort',who:from};
+    const startKey=this.fbRef(room+'/msgs').push().key;
+    this.killPeer();
+    this.setState({role:'host',g,lastSeen:0},()=>this.beginHosting(room,startKey));
+  }
+  // this tab was host, but another player took over while it was away (screen off, no signal)
+  demote(uid){
+    const g=this.state.g,p=g&&g.players.find(q=>q.id===uid),room=this.room();
+    this.hostRoom=null;this.killPeer();
+    this.setState({phase:'join',code:room,g:null,role:null,joining:false,err:'通信が途切れている間に、ホストが'+(p?p.name+' さん':'ほかの人')+'に交代しました。もう一度参加してください'});
+  }
+  // who takes over when the host leaves: the next player still connected; with nobody left the room is closed instead
+  nextHost(){
+    const g=this.state.g;if(!g)return null;
+    const pres=this.pres||{},p=g.players.find(q=>q.id!==this.me&&pres[q.id]&&Object.keys(pres[q.id]).length>0);
+    return p?p.id:null;
   }
   startGuest(code,name){
     this.killPeer();
@@ -782,7 +827,7 @@ class Component extends DCLogic {
       if(m.t==='join'){
         if(conn)conn.pid=m.id;
         if(g.players.some(p=>p.id===m.id))return this.commit(g);
-        if(g.status!=='lobby')return this.post({t:'reject',id:m.id,reason:'ゲームが進行中のため参加できません'});
+        if(g.status==='playing')return this.post({t:'reject',id:m.id,reason:'ゲームが進行中のため参加できません'});
         if(g.players.length>=6)return this.post({t:'reject',id:m.id,reason:'満員です（最大6人）'});
         const ng=clone(g);ng.players.push({id:m.id,name:m.name,hand:[]});this.commit(ng);
       } else if(m.t==='act')this.handle(m.id,m.a);
@@ -819,7 +864,7 @@ class Component extends DCLogic {
   act(a){if(this.state.role==='host')this.handle(this.me,a);else this.post({t:'act',id:this.me,a});}
   handle(id,a){
     const g=this.state.g;if(!g)return;
-    if(a.type==='start'){if(id!==g.hostId||g.players.length<2)return;return this.commit(deal(clone(g)));}
+    if(a.type==='start'){if(id!==g.hostId||g.players.length<2)return;const ng=deal(clone(g));ng.handover=null;return this.commit(ng);}
     if(g.status!=='playing'||g.players[g.cur].id!==id)return;
     const p=g.players[g.cur];
     if(a.type==='play'){const c=p.hand[a.idx];if(!c)return;return this.commit(apply(g,c,'hand',a.idx,a.val));}
@@ -840,7 +885,9 @@ class Component extends DCLogic {
   };
   leave=(silent)=>{
     const s=this.state;if(!s.role)return;
-    if(s.role==='host'){this.post({t:'closed'});if(silent===true&&this.db&&this.hostRoom){this.handRef(this.hostRoom).onDisconnect().remove();this.fbRef(this.hostRoom).onDisconnect().remove();}}
+    const next=s.role==='host'&&this.db&&this.hostRoom?this.nextHost():null;
+    if(next){this.handingOver=true;this.fbRef(this.hostRoom+'/host').set(next).catch(()=>{});this.hostRoom=null;setTimeout(()=>{this.handingOver=false;},400);}
+    else if(s.role==='host'){this.post({t:'closed'});if(silent===true&&this.db&&this.hostRoom){this.handRef(this.hostRoom).onDisconnect().remove();this.fbRef(this.hostRoom).onDisconnect().remove();}}
     else this.post({t:'leave',id:this.me});
     setTimeout(()=>this.killPeer(),300);
     if(silent!==true)this.setState({phase:'home',g:null,role:null,err:''});
@@ -879,7 +926,8 @@ class Component extends DCLogic {
       askLeave:()=>this.setState({confirmLeave:true}),cancelLeave:()=>this.setState({confirmLeave:false}),
       doLeave:()=>{this.setState({confirmLeave:false,turnAlert:false,toast:false});this.leave();},
       confirmLeave:!!s.confirmLeave&&s.phase==='room',
-      leaveMsg:isHost?'あなたはホストです。退出すると部屋が閉じ、全員のゲームが終了します。':'退出すると、このゲームは全員ぶん無効になります。',
+      leaveMsg:isHost?(players.length>1&&this.db?'あなたはホストです。退出すると次の人がホストを引き継ぎ、このゲームは全員ぶん無効になります。':'あなたはホストです。退出すると部屋が閉じ、全員のゲームが終了します。'):'退出すると、このゲームは全員ぶん無効になります。',
+      hasHandover:!!(g&&g.handover),handoverMsg:g&&g.handover?g.handover.from+' さんに代わって、'+g.handover.to+' さんがホストになりました':'',
       turnAlert:!!s.turnAlert&&myTurn&&!s.confirmLeave,
       roomCode:g?g.room:'',
       netOk:s.net==='ok',netWait:s.net==='wait',netOff:s.net==='off',
