@@ -43,9 +43,19 @@ Vercel（https://play101game.vercel.app/）で公開しています。`main` に
 - `hands101/<ルームコード>/<プレイヤーID>` … ゲストそれぞれの手札（本人だけが読める）
 
 ## Firebase の設定
-セキュリティルールは `database.rules.json` にあります。設定は次の順番で行ってください（順番を逆にすると、古いページが動かなくなります）。
-1. この版を `main` に入れて、公開ページに反映されたことを確認する
-2. Firebase コンソール → Authentication → ログイン方法 →「匿名」を有効にする
-3. Realtime Database → ルール に `database.rules.json` の中身を貼り付けて「公開」する
+セキュリティルールは `database.rules.json` にあります。ほかの人の手札を読む・場の情報を書き換える・ホストを乗っ取る・他人の部屋を消す、といった操作を拒否します。匿名ログイン（Authentication →「匿名」）を有効にしておく必要があります。
 
-ルールを入れると、ほかの人の手札を読む・場の情報を書き換える・ホストを乗っ取る・他人の部屋を消す、といった操作が拒否されます。
+### ルールの自動反映
+`database.rules.json` を変えると、GitHub Actions（`.github/workflows/firebase-rules.yml`）が次のことをします。
+- プルリクエスト：ルールを Firebase エミュレーターに読み込ませて、書き間違いがないか確認する（`scripts/check-rules.sh`。手元でも Node と Java があれば実行できる）
+- `main` へのマージ：Firebase にルールを公開する
+
+ルールとページは、マージしたときにほぼ同時に公開されます。そのため、新しいルールは「今公開中のページでも動く」ように書いてください（許可を広げるのが先、狭めるのはページの更新が行き渡ったあと）。
+
+最初に一度だけ、次の設定が必要です。
+1. Google Cloud Console（プロジェクト games-ba1fa）→ IAM と管理 → サービス アカウント → 作成。ロールは「Firebase Realtime Database 管理者」と「Firebase 閲覧者」
+2. 作ったサービス アカウント →「鍵」→「鍵を追加」→ JSON。ダウンロードされたファイルの中身をコピーする
+3. GitHub のこのリポジトリ → Settings → Secrets and variables → Actions →「New repository secret」。名前は `FIREBASE_SERVICE_ACCOUNT`、値に 2 の中身を貼る
+4. Actions →「Firebase rules」→「Run workflow」で一度動かして、成功することを確認する
+
+ダウンロードした JSON ファイルは、Secret に登録したら削除してください。
