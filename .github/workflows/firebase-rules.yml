@@ -1,0 +1,48 @@
+# Keeps the live Realtime Database rules in step with database.rules.json:
+# pull requests only check that the rules load; a push to main also publishes them.
+name: Firebase rules
+
+on:
+  pull_request:
+    paths: [database.rules.json, firebase.json, .firebaserc, scripts/check-rules.sh, scripts/firebase.emulator.json, .github/workflows/firebase-rules.yml]
+  push:
+    branches: [main]
+    paths: [database.rules.json, firebase.json, .firebaserc, scripts/check-rules.sh, scripts/firebase.emulator.json, .github/workflows/firebase-rules.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-rules-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Load the rules into the database emulator
+        run: ./scripts/check-rules.sh
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Publish the rules
+        run: npx --yes firebase-tools@15.34.2 deploy --only database --project games-ba1fa --non-interactive
