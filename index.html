@@ -365,11 +365,14 @@ button:disabled{opacity:.45;cursor:not-allowed;}
         <span style="width:20px;font-family:'Noto Sans JP',sans-serif;font-size:20px;color:#e1ad66;font-feature-settings:'tnum';">{{ p.no }}</span>
         <span style="flex:1;font-size:16px;">{{ p.name }}</span>
         <sc-if value="{{ p.isMe }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid rgba(243,242,242,.3);border-radius:3px;color:#d7d3d3;">あなた</span></sc-if>
+        <sc-if value="{{ p.isCpu }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid rgba(243,242,242,.3);border-radius:3px;color:#b9b4b2;font-family:'Noto Sans JP',sans-serif;">CPU</span></sc-if>
         <sc-if value="{{ p.isHost }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid #e1ad66;border-radius:3px;color:#e1ad66;">ホスト</span></sc-if>
         <sc-if value="{{ p.ready }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border-radius:3px;background:#e1ad66;color:#1b1918;">準備OK</span></sc-if>
         <sc-if value="{{ p.waiting }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px dashed rgba(243,242,242,.3);border-radius:3px;color:#9b9797;">準備中</span></sc-if>
+        <sc-if value="{{ p.rmCpu }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ p.rm }}" aria-label="{{ p.name }} を外す" style="width:36px;height:36px;margin-right:-8px;border:0;background:transparent;color:#9b9797;font:inherit;font-size:16px;cursor:pointer;" style-hover="color:#f3f2f2;">✕</button></sc-if>
       </div>
     </sc-for>
+    <sc-if value="{{ canAddCpu }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ addCpu }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0;border:0;border-bottom:1px dashed rgba(243,242,242,.16);background:transparent;color:#e1ad66;font:inherit;font-size:15px;text-align:left;cursor:pointer;" style-hover="background:rgba(225,173,102,.06);"><span style="width:20px;font-family:'Noto Sans JP',sans-serif;font-size:20px;">＋</span>CPUを追加</button></sc-if>
   </div>
   <button sc-camel-on-click="{{ openRuleEdit }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:#f3f2f2;font:inherit;text-align:left;cursor:pointer;" style-hover="background:rgba(243,242,242,.04);">
     <span style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:12px;color:#b9b4b2;">この部屋のルール</span><span style="font-size:15px;line-height:1.5;color:{{ ruleSumColor }};">{{ ruleSummary }}</span></span>
@@ -523,9 +526,11 @@ button:disabled{opacity:.45;cursor:not-allowed;}
         <span style="width:20px;font-family:'Noto Sans JP',sans-serif;font-size:20px;color:#e1ad66;font-feature-settings:'tnum';">{{ p.no }}</span>
         <span style="flex:1;font-size:16px;">{{ p.name }}</span>
         <sc-if value="{{ p.isMe }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid rgba(243,242,242,.3);border-radius:3px;color:#d7d3d3;">あなた</span></sc-if>
+        <sc-if value="{{ p.isCpu }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid rgba(243,242,242,.3);border-radius:3px;color:#b9b4b2;font-family:'Noto Sans JP',sans-serif;">CPU</span></sc-if>
         <sc-if value="{{ p.isHost }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px solid #e1ad66;border-radius:3px;color:#e1ad66;">ホスト</span></sc-if>
         <sc-if value="{{ p.ready }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border-radius:3px;background:#e1ad66;color:#1b1918;">準備OK</span></sc-if>
         <sc-if value="{{ p.waiting }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:3px 8px;border:1px dashed rgba(243,242,242,.3);border-radius:3px;color:#9b9797;">準備中</span></sc-if>
+        <sc-if value="{{ p.rmCpu }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ p.rm }}" aria-label="{{ p.name }} を外す" style="width:36px;height:36px;margin-right:-8px;border:0;background:transparent;color:#9b9797;font:inherit;font-size:16px;cursor:pointer;" style-hover="color:#f3f2f2;">✕</button></sc-if>
       </div>
     </sc-for>
     </div>
@@ -632,6 +637,46 @@ const desc=(r,o)=>{if(r==='JK')return o.joker100?DESC.JK:'+50';const c=choicesFo
 const short=(r,o)=>{const c=choicesFor(r,o);return c&&c.length===1?'+'+c[0]:(SHORT[r]||('+'+FIX[r]));};
 const guestsOf=g=>g.players.filter(p=>p.id!==g.hostId);
 const allReady=g=>g.players.length>=2&&guestsOf(g).every(p=>p.ready);
+// CPU players live only in the host's state; the host's tab plays their turns with cpuMove
+const CPU_MAX=6;
+const cpuName=g=>{let n=1;while(g.players.some(p=>p.name==='CPU '+n))n++;return 'CPU '+n;};
+const ESCAPE=v=>v==='pass'||v==='skip'||v==='reverse'||v===-10;
+const canEscape=(c,o)=>(choicesFor(c.rank,o)||[]).some(ESCAPE);
+// what one way of playing a card does to the total; null when it is the Joker win
+function outcome(c,v,total,o){
+  if(c.rank==='JK'&&total===100&&o.joker100)return null;
+  const after=typeof v==='number'?Math.max(0,total+v):(v==null?total+FIX[c.rank]:total);
+  return {after,lose:after>101,reset:after===101&&o.reset101};
+}
+// CPU (ふつう). It only looks at what any player can see: its own hand, the total and the room's rules.
+// Win with the Joker at 100; never take a move that goes over 101; among safe moves, push the total up,
+// keep pass/skip/reverse/−10 for when they are needed, avoid leaving 100 for a Joker, and reset at 101 only as a last safe resort.
+// With no safe move it gambles on the deck (or, without that rule, plays the smallest overshoot).
+function cpuMove(g,p){
+  const o=optsOf(g),total=g.total||0,pend=g.pending&&g.pending.card;
+  const cards=pend?[{c:pend,idx:null,rest:p.hand}]:p.hand.map((c,i)=>({c,idx:i,rest:p.hand.filter((_,j)=>j!==i)}));
+  const moves=[];
+  for(const {c,idx,rest} of cards){
+    const vals=choicesFor(c.rank,o)||[null];
+    for(const v of vals){
+      const r=outcome(c,v,total,o),act=pend?{type:'choose',val:v}:{type:'play',idx,val:v};
+      if(!r)return act;
+      let score;
+      if(r.lose)score=-1000-r.after;
+      else if(r.reset)score=-60;
+      else{
+        score=r.after;
+        if(ESCAPE(v))score-=40;
+        if(r.after===100&&o.joker100)score-=30;
+        if(rest.some(x=>canEscape(x,o)))score+=15;
+      }
+      moves.push({act,score:score+Math.random()*0.5,lose:r.lose});
+    }
+  }
+  moves.sort((a,b)=>b.score-a.score);
+  if(moves[0].lose&&!pend&&o.deckPlay)return {type:'draw'};
+  return moves[0].act;
+}
 const offList=o=>RULES.filter(r=>!o[r.k]).map(r=>r.off);
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const label=c=>c.rank==='JK'?'ジョーカー':c.suit+c.rank;
@@ -639,7 +684,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 const mod=(a,n)=>((a%n)+n)%n;
 function newDeck(){const d=[];let id=0;SUITS.forEach(([s,col])=>RANKS.forEach(r=>d.push({id:id++,rank:r,suit:s,color:col})));d.push({id:id++,rank:'JK',suit:'★',color:'#7d5411'},{id:id++,rank:'JK',suit:'★',color:'#7d5411'});return shuffle(d);}
 function drawFrom(g,notes){if(!g.deck.length){const top=g.discard.pop();g.deck=shuffle(g.discard);g.discard=top?[top]:[];notes.push('山札が尽きたので、出たカードをシャッフルして戻しました');}return g.deck.pop();}
-function deal(g){const deck=newDeck();g.players.forEach(p=>{p.hand=[deck.pop(),deck.pop()];p.ready=false;});g.rulesChanged=false;Object.assign(g,{status:'playing',deck,discard:[],total:0,dir:1,cur:0,ev:null,pending:null,result:null,round:(g.round||0)+1});return g;}
+function deal(g){const deck=newDeck();g.players.forEach(p=>{p.hand=[deck.pop(),deck.pop()];p.ready=!!p.cpu;});g.rulesChanged=false;Object.assign(g,{status:'playing',deck,discard:[],total:0,dir:1,cur:0,ev:null,pending:null,result:null,round:(g.round||0)+1});return g;}
 function apply(g0,card,from,idx,val){
   const g=clone(g0),n=g.players.length,p=g.players[g.cur],notes=[];
   if(from==='hand'){p.hand.splice(idx,1);const c=drawFrom(g,notes);if(c)p.hand.push(c);}
@@ -677,7 +722,7 @@ function splitState(g){
   const players=g.players||[];
   const pub={...g,deck:[],deckCount:g.deck?g.deck.length:0,pending:g.pending?{hidden:true}:null,players:players.map(p=>({...p,hand:[],handCount:p.hand?p.hand.length:0}))};
   const priv={};
-  players.forEach((p,i)=>{if(p.id!==g.hostId)priv[p.id]={v:g.v||0,hand:p.hand||[],pending:g.status==='playing'&&i===g.cur&&g.pending?g.pending.card:null};});
+  players.forEach((p,i)=>{if(p.id!==g.hostId&&!p.cpu)priv[p.id]={v:g.v||0,hand:p.hand||[],pending:g.status==='playing'&&i===g.cur&&g.pending?g.pending.card:null};});
   return {pub,priv};
 }
 
@@ -700,7 +745,7 @@ class Component extends DCLogic {
     // iPhone ignores navigator.vibrate, so the turn alert also beeps; audio may only start after a tap, hence the unlock here
     this.onTap=()=>{try{if(!this.ac)this.ac=new (window.AudioContext||window.webkitAudioContext)();if(this.ac.state!=='running')this.ac.resume();}catch(e){}};document.addEventListener('pointerdown',this.onTap);
   }
-  componentWillUnmount(){clearInterval(this.tick);clearTimeout(this.tt);clearTimeout(this.ta);clearTimeout(this.tb);clearTimeout(this.tc);window.removeEventListener('pagehide',this.unload);removeEventListener('bip',this.onBip);removeEventListener('appinstalled',this.onBip);document.removeEventListener('visibilitychange',this.onVis);document.removeEventListener('pointerdown',this.onTap);this.ch&&this.ch.close();}
+  componentWillUnmount(){clearInterval(this.tick);clearTimeout(this.tt);clearTimeout(this.ta);clearTimeout(this.tb);clearTimeout(this.tc);clearTimeout(this.tcpu);window.removeEventListener('pagehide',this.unload);removeEventListener('bip',this.onBip);removeEventListener('appinstalled',this.onBip);document.removeEventListener('visibilitychange',this.onVis);document.removeEventListener('pointerdown',this.onTap);this.ch&&this.ch.close();}
   // keeps the screen on while in a room: a sleeping host phone stops the game for everyone, and a sleeping guest is dropped after AWAY_MS
   syncWake(){
     const want=this.state.phase==='room'&&document.visibilityState==='visible';
@@ -712,8 +757,22 @@ class Component extends DCLogic {
     const ac=this.ac;if(!ac||ac.state!=='running')return;
     [0,.18].forEach(t=>{const o=ac.createOscillator(),v=ac.createGain(),at=ac.currentTime+t;o.frequency.value=880;v.gain.setValueAtTime(.0001,at);v.gain.exponentialRampToValueAtTime(.2,at+.02);v.gain.exponentialRampToValueAtTime(.0001,at+.14);o.connect(v).connect(ac.destination);o.start(at);o.stop(at+.15);});
   }
+  // the host plays the CPUs' turns. A CPU waits as long as a person's 「あなたのターンです」 stays up (shown after `wait`, for 1.8s), then 0.5s more;
+  // a choice for a card drawn from the deck follows 0.8s later
+  driveCpu(){
+    const s=this.state,g=s.g,p=g&&g.status==='playing'&&s.role==='host'?g.players[g.cur]:null;
+    const key=p&&p.cpu?g.round+':'+(g.ev?g.ev.seq:0)+':'+(g.pending?'p':''):null;
+    if(key===this.cpuKey)return;
+    this.cpuKey=key;clearTimeout(this.tcpu);if(!key)return;
+    const delay=g.pending?800:(g.ev?2000:300)+1800+500;
+    this.tcpu=setTimeout(()=>{
+      const g2=this.state.g;if(this.cpuKey!==key||!g2||g2.status!=='playing')return;
+      const cp=g2.players[g2.cur];if(!cp||cp.id!==p.id)return;
+      this.cpuKey=null;this.handle(cp.id,cpuMove(g2,cp));
+    },delay);
+  }
   componentDidUpdate(){
-    this.syncWake();
+    this.syncWake();this.driveCpu();
     const g=this.state.g,mine=!!g&&g.status==='playing'&&g.players[g.cur]&&g.players[g.cur].id===this.me;
     const tk=mine?(g.round+':'+(g.ev?g.ev.seq:0)):null;
     if(tk!==this.turnKey){this.turnKey=tk;clearTimeout(this.ta);clearTimeout(this.tb);
@@ -827,7 +886,7 @@ class Component extends DCLogic {
   promote(){
     const pub=this.pub;if(this.state.role!=='guest'||!pub||!this.db)return;
     const room=pub.room,name=id=>(pub.players.find(p=>p.id===id)||{}).name||'ゲスト',from=name(pub.hostId);
-    const g={room,hostId:this.me,status:pub.status==='playing'?'over':'lobby',players:pub.players.filter(p=>p.id!==pub.hostId).map(p=>({id:p.id,name:p.name,hand:[]})),ev:null,round:pub.round||0,v:pub.v||0,opts:cleanOpts(pub.opts),handover:{from,to:name(this.me)}};
+    const g={room,hostId:this.me,status:pub.status==='playing'?'over':'lobby',players:pub.players.filter(p=>p.id!==pub.hostId).map(p=>p.cpu?{id:p.id,name:p.name,hand:[],cpu:true,ready:true}:{id:p.id,name:p.name,hand:[]}),ev:null,round:pub.round||0,v:pub.v||0,opts:cleanOpts(pub.opts),handover:{from,to:name(this.me)}};
     if(pub.status==='playing')g.result={kind:'abort',who:from};
     const startKey=this.fbRef(room+'/msgs').push().key;
     this.killPeer();
@@ -938,6 +997,13 @@ class Component extends DCLogic {
   handle(id,a){
     const g=this.state.g;if(!g)return;
     // guests press 準備OK in the lobby and after each game; the host's start is its own go, and it needs everyone else ready
+    if(a.type==='addCpu'||a.type==='rmCpu'){
+      if(id!==g.hostId||g.status==='playing')return;
+      const ng=clone(g);
+      if(a.type==='addCpu'){if(ng.players.length>=CPU_MAX)return;let n=1;while(ng.players.some(p=>p.id==='cpu-'+n))n++;ng.players.push({id:'cpu-'+n,name:cpuName(ng),hand:[],cpu:true,ready:true});}
+      else{const i=ng.players.findIndex(p=>p.id===a.pid&&p.cpu);if(i<0)return;ng.players.splice(i,1);}
+      return this.commit(ng);
+    }
     if(a.type==='ready'){
       if(g.status==='playing')return;
       const i=g.players.findIndex(p=>p.id===id);if(i<0||id===g.hostId||!!g.players[i].ready===!!a.on)return;
@@ -949,7 +1015,7 @@ class Component extends DCLogic {
       if(id!==g.hostId||g.status==='playing'||!(a.k in DEF_OPTS||a.k==='*'))return;
       const ng=clone(g),o=optsOf(g);ng.opts=a.k==='*'?{...DEF_OPTS}:{...o,[a.k]:!o[a.k]};
       // a rule change asks everyone to look at the rules again before the next game
-      if(ng.players.some(p=>p.ready)){ng.players.forEach(p=>{p.ready=false;});ng.rulesChanged=true;}
+      if(ng.players.some(p=>p.ready&&!p.cpu)){ng.players.forEach(p=>{p.ready=!!p.cpu;});ng.rulesChanged=true;}
       try{localStorage.setItem('101-online-opts',JSON.stringify(ng.opts));}catch(e){}
       return this.commit(ng);
     }
@@ -1021,11 +1087,12 @@ class Component extends DCLogic {
       turnAlert:!!s.turnAlert&&myTurn&&!s.confirmLeave,
       roomCode:g?g.room:'',
       netOk:s.net==='ok',netWait:s.net==='wait',netOff:s.net==='off',
-      lobby:players.map((p,i)=>{const h=g&&p.id===g.hostId;return{no:i+1,name:p.name,isMe:p.id===this.me,isHost:h,ready:!h&&!!p.ready,waiting:!h&&!p.ready};}),
+      lobby:players.map((p,i)=>{const h=g&&p.id===g.hostId;return{no:i+1,name:p.name,isMe:p.id===this.me,isHost:h,isCpu:!!p.cpu,rmCpu:isHost&&!!p.cpu&&!playing,rm:()=>this.act({type:'rmCpu',pid:p.id}),ready:!h&&!!p.ready,waiting:!h&&!p.ready};}),
+      canAddCpu:isHost&&players.length<CPU_MAX,addCpu:()=>this.act({type:'addCpu'}),cantAddCpu:!(players.length<CPU_MAX),
       meReady:!!(meP&&meP.ready),notMeReady:!(meP&&meP.ready),
       setReady:()=>this.act({type:'ready',on:true}),unReady:()=>this.act({type:'ready',on:false}),
       readyNote:!isHost&&!!(g&&g.rulesChanged)&&!(meP&&meP.ready),
-      startHint:players.length<2?'2人以上そろうと始められます':(g&&allReady(g)?'全員の準備ができました':'全員の準備OKを待っています（'+guestsOf(g).filter(p=>p.ready).length+' / '+guestsOf(g).length+'）'),
+      startHint:players.length<2?'2人以上そろうと始められます（CPUを追加すると1人でも遊べます）':(g&&allReady(g)?'全員の準備ができました':'全員の準備OKを待っています（'+guestsOf(g).filter(p=>p.ready).length+' / '+guestsOf(g).length+'）'),
       lobbyCount:players.length,lobbyEmpty:6-players.length,
       isHost,isGuest:!isHost,canStart:isHost&&!!g&&allReady(g),cantStart:!(isHost&&!!g&&allReady(g)),
       start:()=>this.act({type:'start'}),
