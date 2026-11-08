@@ -369,6 +369,10 @@ button:disabled{opacity:.45;cursor:not-allowed;}
       </div>
     </sc-for>
   </div>
+  <button sc-camel-on-click="{{ openRuleEdit }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:#f3f2f2;font:inherit;text-align:left;cursor:pointer;" style-hover="background:rgba(243,242,242,.04);">
+    <span style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:12px;color:#b9b4b2;">この部屋のルール</span><span style="font-size:15px;line-height:1.5;color:{{ ruleSumColor }};">{{ ruleSummary }}</span></span>
+    <span style="font-size:13px;color:#e1ad66;white-space:nowrap;">{{ ruleEditLabel }} ›</span>
+  </button>
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
     <button sc-camel-on-click="{{ invite }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">招待リンクを送る</button>
     <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;font-size:12px;color:#e1ad66;">リンクをコピーしました</div></sc-if>
@@ -452,7 +456,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
   </div>
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
     <button sc-camel-on-click="{{ playSelected }}" disabled="{{ cantPlay }}" style="height:52px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">選んだカードを出す</button>
-    <button sc-camel-on-click="{{ drawPlay }}" disabled="{{ cantDraw }}" style="height:46px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.07);">山札から引いて、そのまま出す</button>
+    <sc-if value="{{ deckPlay }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ drawPlay }}" disabled="{{ cantDraw }}" style="height:46px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.07);">山札から引いて、そのまま出す</button></sc-if>
   </div>
 </div>
 </sc-if>
@@ -507,8 +511,10 @@ button:disabled{opacity:.45;cursor:not-allowed;}
   </sc-if>
   <sc-if value="{{ hasHandover }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#facb8d;">{{ handoverMsg }}</div></sc-if>
   <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+    <div style="font-size:12px;line-height:1.7;color:#b9b4b2;">ルール：{{ ruleSummary }}</div>
     <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ again }}" disabled="{{ cantStart }}" style="width:100%;height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">同じメンバーでもう一度</button></sc-if>
     <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="height:54px;display:grid;place-items:center;border:1px solid rgba(243,242,242,.16);border-radius:4px;color:#b9b4b2;font-size:15px;">ホストの再戦を待っています…</div></sc-if>
+    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ openRuleEdit }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">ルールを変える</button></sc-if>
     <button sc-camel-on-click="{{ leave }}" style="height:48px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;">部屋を出る</button>
   </div>
 </div>
@@ -534,19 +540,42 @@ button:disabled{opacity:.45;cursor:not-allowed;}
   </div>
 </div>
 </sc-if>
+<sc-if value="{{ ruleEdit }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:6;background:#1b1918;display:flex;flex-direction:column;gap:14px;padding:20px 24px 28px;overflow:auto;font-family:'Noto Serif JP',serif;">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(243,242,242,.16);padding-bottom:10px;"><span style="font-size:12px;letter-spacing:.2em;color:#e1ad66;">この部屋のルール</span><button sc-camel-on-click="{{ closeRuleEdit }}" style="height:44px;border:0;background:transparent;color:#b9b4b2;font:inherit;font-size:14px;cursor:pointer;">閉じる ✕</button></div>
+  <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;line-height:1.7;color:#b9b4b2;">タップで ありなし を切り替えます。変えるとすぐ全員の画面に反映され、次のゲームから使われます。</div></sc-if>
+  <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.7;color:#b9b4b2;">ルールはホストが決めます。</div></sc-if>
+  <div style="display:flex;flex-direction:column;border-top:1px solid rgba(243,242,242,.16);">
+    <sc-for list="{{ ruleOpts }}" as="r" hint-placeholder-count="8">
+      <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+        <button sc-camel-on-click="{{ r.toggle }}" aria-pressed="{{ r.on }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:{{ r.fg }};font:inherit;font-size:14px;text-align:left;cursor:pointer;">
+          <span style="flex:1;">{{ r.label }}</span>
+          <span style="width:40px;height:22px;border-radius:11px;border:1px solid {{ r.mark }};position:relative;flex:none;"><sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#e1ad66;"></span></sc-if><sc-if value="{{ r.off }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#7d7979;"></span></sc-if></span>
+          <span style="width:28px;font-size:12px;color:{{ r.mark }};">{{ r.state }}</span>
+        </button>
+      </sc-if>
+      <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid rgba(243,242,242,.16);color:{{ r.fg }};font-size:14px;"><span style="flex:1;">{{ r.label }}</span><span style="font-size:12px;color:{{ r.mark }};">{{ r.state }}</span></div>
+      </sc-if>
+    </sc-for>
+  </div>
+  <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;padding-top:8px;">
+      <sc-if value="{{ ruleChanged }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ resetRules }}" style="height:44px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#d7d3d3;font:inherit;font-size:14px;cursor:pointer;">標準ルールに戻す</button></sc-if>
+      <button sc-camel-on-click="{{ closeRuleEdit }}" style="height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">決定</button>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
 <sc-if value="{{ rules }}" hint-placeholder-val="{{ false }}">
 <div style="position:absolute;inset:0;z-index:6;background:#1b1918;display:flex;flex-direction:column;gap:14px;padding:20px 24px 28px;overflow:auto;font-family:'Noto Serif JP',serif;">
   <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(243,242,242,.16);padding-bottom:10px;"><span style="font-size:12px;letter-spacing:.2em;color:#e1ad66;">ルール</span><button sc-camel-on-click="{{ closeRules }}" style="height:44px;border:0;background:transparent;color:#b9b4b2;font:inherit;font-size:14px;cursor:pointer;">閉じる ✕</button></div>
-  <div style="font-size:15px;line-height:1.9;color:#d7d3d3;">順番にカードを1枚出し、山札から1枚引きます（山札から引いてそのまま出すことも可）。場の合計が<span style="color:#e1ad66;">101を超えたら出した人の負け</span>。ちょうど101なら0に戻って続行。合計100でジョーカーを出せば一人勝ち。</div>
+  <div style="font-size:12px;line-height:1.7;color:#e1ad66;">{{ ruleScope }}</div>
+  <div style="font-size:15px;line-height:1.9;color:#d7d3d3;">順番にカードを1枚出し、山札から1枚引きます{{ ruleDraw }}。場の合計が<span style="color:#e1ad66;">101を超えたら出した人の負け</span>。{{ ruleTail }}</div>
   <div style="display:grid;grid-template-columns:84px 1fr;font-size:14px;border-top:1px solid rgba(243,242,242,.16);">
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">A</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">+1 か +11</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">2–4, 6, 7</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">数字の分だけ足す</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">5</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">パス か +5</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">8</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">スキップ か +8</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">9</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">リバース か +9</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">10</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">+10 か −10</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">J · Q · K</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">+10 · +20 · +30</div>
-    <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">Joker</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">+50</div>
+    <sc-for list="{{ ruleRows }}" as="r" hint-placeholder-count="8">
+      <div style="padding:8px 0;border-bottom:1px solid rgba(243,242,242,.16);font-family:'Noto Sans JP',sans-serif;font-size:19px;color:#e1ad66;">{{ r.name }}</div><div style="padding:10px 0;border-bottom:1px solid rgba(243,242,242,.16);color:#d7d3d3;">{{ r.text }}</div>
+    </sc-for>
   </div>
 </div>
 </sc-if>
@@ -558,10 +587,28 @@ const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const FIX={'2':2,'3':3,'4':4,'6':6,'7':7,'J':10,'Q':20,'K':30,'JK':50};
 const DESC={A:'+1 か +11 を選ぶ','5':'パス か +5 を選ぶ','8':'スキップ か +8 を選ぶ','9':'リバース か +9 を選ぶ','10':'+10 か −10 を選ぶ',J:'+10',Q:'+20',K:'+30',JK:'+50／合計100なら即勝利'};
 const SHORT={A:'+1/+11','5':'パス/+5','8':'スキップ/+8','9':'リバース/+9','10':'±10',JK:'+50'};
-const desc=r=>DESC[r]||('+'+FIX[r]);
-const short=r=>SHORT[r]||('+'+FIX[r]);
-const needsChoice=c=>['A','10','5','8','9'].includes(c.rank);
+// rules the host can switch on and off for each room; all on is the standard game. g.opts only holds them for rooms that set any, so a missing key means on
+const RULES=[
+  {k:'ace11',on:'A を +11 にもできる',off:'A は +1 だけ'},
+  {k:'pass5',on:'5 でパスできる',off:'5 は +5 だけ'},
+  {k:'skip8',on:'8 でスキップできる',off:'8 は +8 だけ'},
+  {k:'rev9',on:'9 でリバースできる',off:'9 は +9 だけ'},
+  {k:'minus10',on:'10 を −10 にもできる',off:'10 は +10 だけ'},
+  {k:'reset101',on:'ちょうど101で0に戻る',off:'ちょうど101はそのまま続行'},
+  {k:'joker100',on:'合計100でジョーカーなら一人勝ち',off:'ジョーカーはいつも +50'},
+  {k:'deckPlay',on:'山札から引いてそのまま出せる',off:'手札からしか出せない'}
+];
+const DEF_OPTS=Object.fromEntries(RULES.map(r=>[r.k,true]));
+const optsOf=g=>({...DEF_OPTS,...((g&&g.opts)||{})});
+const cleanOpts=o=>Object.fromEntries(RULES.map(r=>[r.k,!(o&&o[r.k]===false)]));
 const CHOICES={A:[1,11],'10':[10,-10],'5':['pass',5],'8':['skip',8],'9':['reverse',9]};
+const GATE={A:'ace11','10':'minus10','5':'pass5','8':'skip8','9':'rev9'};
+// with its rule off, a card keeps only its plain number
+const choicesFor=(r,o)=>{const c=CHOICES[r];if(!c)return null;return o[GATE[r]]?c:[c.find(v=>typeof v==='number')];};
+const needsChoice=(c,o)=>(choicesFor(c.rank,o)||[]).length>1;
+const desc=(r,o)=>{if(r==='JK')return o.joker100?DESC.JK:'+50';const c=choicesFor(r,o);return c&&c.length===1?'+'+c[0]:(DESC[r]||('+'+FIX[r]));};
+const short=(r,o)=>{const c=choicesFor(r,o);return c&&c.length===1?'+'+c[0]:(SHORT[r]||('+'+FIX[r]));};
+const offList=o=>RULES.filter(r=>!o[r.k]).map(r=>r.off);
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const label=c=>c.rank==='JK'?'ジョーカー':c.suit+c.rank;
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -573,17 +620,18 @@ function apply(g0,card,from,idx,val){
   const g=clone(g0),n=g.players.length,p=g.players[g.cur],notes=[];
   if(from==='hand'){p.hand.splice(idx,1);const c=drawFrom(g,notes);if(c)p.hand.push(c);}
   g.discard.push(card);g.pending=null;
-  const r=card.rank,before=g.total;
+  const r=card.rank,before=g.total,o=optsOf(g0),ch=choicesFor(r,o);
+  if(ch&&ch.length===1)val=ch[0];
   const ev={seq:(g0.ev?g0.ev.seq:0)+1,who:p.name,whoId:p.id,card,from,before,notes};
-  if(r==='JK'&&before===100){Object.assign(ev,{kind:'win',head:'ジョーカー勝利'});g.ev=ev;g.status='over';g.result={kind:'win',idx:g.cur};return g;}
+  if(r==='JK'&&before===100&&o.joker100){Object.assign(ev,{kind:'win',head:'ジョーカー勝利'});g.ev=ev;g.status='over';g.result={kind:'win',idx:g.cur};return g;}
   let after=before,step=1;
-  if(r==='5'&&typeof val!=='number'){ev.kind='pass';ev.head='パス';}
-  else if(r==='8'&&typeof val!=='number'){ev.kind='skip';ev.head='スキップ';step=2;ev.skipped=g.players[mod(g.cur+g.dir,n)].name;}
-  else if(r==='9'&&typeof val!=='number'){ev.kind='reverse';ev.head='リバース';g.dir=-g.dir;}
-  else{const d=val!=null?val:FIX[r];after=Math.max(0,before+d);ev.kind='add';ev.head=(d>0?'+':'−')+Math.abs(d);}
+  if(val==='pass'){ev.kind='pass';ev.head='パス';}
+  else if(val==='skip'){ev.kind='skip';ev.head='スキップ';step=2;ev.skipped=g.players[mod(g.cur+g.dir,n)].name;}
+  else if(val==='reverse'){ev.kind='reverse';ev.head='リバース';g.dir=-g.dir;}
+  else{const d=typeof val==='number'?val:FIX[r];after=Math.max(0,before+d);ev.kind='add';ev.head=(d>0?'+':'−')+Math.abs(d);}
   ev.after=after;
   if(after>101){ev.kind='lose';g.ev=ev;g.total=after;g.status='over';g.result={kind:'lose',idx:g.cur};return g;}
-  if(after===101){ev.reset=true;after=0;}
+  if(after===101&&o.reset101){ev.reset=true;after=0;}
   g.total=after;g.cur=mod(g.cur+g.dir*step,n);g.ev=ev;return g;
 }
 
@@ -755,7 +803,7 @@ class Component extends DCLogic {
   promote(){
     const pub=this.pub;if(this.state.role!=='guest'||!pub||!this.db)return;
     const room=pub.room,name=id=>(pub.players.find(p=>p.id===id)||{}).name||'ゲスト',from=name(pub.hostId);
-    const g={room,hostId:this.me,status:pub.status==='playing'?'over':'lobby',players:pub.players.filter(p=>p.id!==pub.hostId).map(p=>({id:p.id,name:p.name,hand:[]})),ev:null,round:pub.round||0,v:pub.v||0,handover:{from,to:name(this.me)}};
+    const g={room,hostId:this.me,status:pub.status==='playing'?'over':'lobby',players:pub.players.filter(p=>p.id!==pub.hostId).map(p=>({id:p.id,name:p.name,hand:[]})),ev:null,round:pub.round||0,v:pub.v||0,opts:cleanOpts(pub.opts),handover:{from,to:name(this.me)}};
     if(pub.status==='playing')g.result={kind:'abort',who:from};
     const startKey=this.fbRef(room+'/msgs').push().key;
     this.killPeer();
@@ -808,7 +856,8 @@ class Component extends DCLogic {
     this.dbP.then(()=>{
       if(this.state.role)return;
       const room=String(Math.floor(1000+Math.random()*9000));
-      const g={room,hostId:this.me,status:'lobby',players:[{id:this.me,name:this.myName(),hand:[]}],ev:null,round:0};
+      let saved=null;try{saved=JSON.parse(localStorage.getItem('101-online-opts')||'null');}catch(e){}
+      const g={room,hostId:this.me,status:'lobby',players:[{id:this.me,name:this.myName(),hand:[]}],ev:null,round:0,opts:cleanOpts(saved)};
       this.setState({role:'host',phase:'room',err:''},()=>{this.commit(g);this.startHost(room);});
     });
   };
@@ -865,15 +914,23 @@ class Component extends DCLogic {
   handle(id,a){
     const g=this.state.g;if(!g)return;
     if(a.type==='start'){if(id!==g.hostId||g.players.length<2)return;const ng=deal(clone(g));ng.handover=null;return this.commit(ng);}
+    // the room's rules change only between rounds; the host's choice is remembered for the next room it makes
+    if(a.type==='opt'){
+      if(id!==g.hostId||g.status==='playing'||!(a.k in DEF_OPTS||a.k==='*'))return;
+      const ng=clone(g),o=optsOf(g);ng.opts=a.k==='*'?{...DEF_OPTS}:{...o,[a.k]:!o[a.k]};
+      try{localStorage.setItem('101-online-opts',JSON.stringify(ng.opts));}catch(e){}
+      return this.commit(ng);
+    }
     if(g.status!=='playing'||g.players[g.cur].id!==id)return;
-    const p=g.players[g.cur];
-    if(a.type==='play'){const c=p.hand[a.idx];if(!c)return;return this.commit(apply(g,c,'hand',a.idx,a.val));}
+    const p=g.players[g.cur],o=optsOf(g),ok=(c,v)=>{const ch=choicesFor(c.rank,o);return !ch||ch.length<2||ch.includes(v);};
+    if(a.type==='play'){const c=p.hand[a.idx];if(!c||!ok(c,a.val))return;return this.commit(apply(g,c,'hand',a.idx,a.val));}
     if(a.type==='draw'&&!g.pending){
+      if(!o.deckPlay)return;
       const ng=clone(g),notes=[];const c=drawFrom(ng,notes);
-      if(needsChoice(c)){ng.pending={card:c,notes};return this.commit(ng);}
+      if(needsChoice(c,o)){ng.pending={card:c,notes};return this.commit(ng);}
       const r=apply(ng,c,'deck',null,null);r.ev.notes=notes.concat(r.ev.notes);return this.commit(r);
     }
-    if(a.type==='choose'&&g.pending){const r=apply(g,g.pending.card,'deck',null,a.val);r.ev.notes=(g.pending.notes||[]).concat(r.ev.notes);return this.commit(r);}
+    if(a.type==='choose'&&g.pending){if(!ok(g.pending.card,a.val))return;const r=apply(g,g.pending.card,'deck',null,a.val);r.ev.notes=(g.pending.notes||[]).concat(r.ev.notes);return this.commit(r);}
   }
   install=()=>{const e=window.__bip;if(!e)return;e.prompt();e.userChoice.catch(()=>{}).then(()=>{window.__bip=null;this.forceUpdate();});};
   // the OS share sheet where there is one (phones), otherwise copy the link
@@ -895,7 +952,8 @@ class Component extends DCLogic {
   renderVals(){
     const s=this.state,g=s.g,set=o=>()=>this.setState(o);
     const gold='#e1ad66',line='rgba(243,242,242,.16)';
-    const cardOf=c=>c?{rank:c.rank==='JK'?'JOKER':c.rank,suit:c.suit,color:c.color,isJoker:c.rank==='JK',notJoker:c.rank!=='JK',short:short(c.rank)}:{};
+    const o=optsOf(g),inRoom=s.phase==='room'&&!!g,offs=offList(o);
+    const cardOf=c=>c?{rank:c.rank==='JK'?'JOKER':c.rank,suit:c.suit,color:c.color,isJoker:c.rank==='JK',notJoker:c.rank!=='JK',short:short(c.rank,o)}:{};
     const players=g?g.players:[];
     const meIdx=players.findIndex(p=>p.id===this.me),meP=players[meIdx];
     const playing=!!g&&g.status==='playing';
@@ -907,7 +965,7 @@ class Component extends DCLogic {
     const top=g&&g.discard&&g.discard[g.discard.length-1];
     const chCard=s.localChoice?s.localChoice.card:(myTurn&&g.pending?g.pending.card:null);
     const total=g?g.total||0:0;
-    const opts=chCard?CHOICES[chCard.rank].map(v=>{const num=typeof v==='number',a=num?Math.max(0,total+v):total;return{label:num?(v>0?'+':'−')+Math.abs(v):({pass:'パス',skip:'スキップ',reverse:'リバース'}[v]),result:!num?({pass:'合計そのまま '+total,skip:'次の人を飛ばす・合計 '+total,reverse:'逆回りに・合計 '+total}[v]):'合計 → '+(a>101?a+'（101超え＝負け）':a===101?'101 → 0に戻る':String(a)),pick:()=>{if(s.localChoice)this.act({type:'play',idx:s.localChoice.idx,val:v});else this.act({type:'choose',val:v});this.setState({localChoice:null,sel:null});}};}):[];
+    const opts=chCard?choicesFor(chCard.rank,o).map(v=>{const num=typeof v==='number',a=num?Math.max(0,total+v):total;return{label:num?(v>0?'+':'−')+Math.abs(v):({pass:'パス',skip:'スキップ',reverse:'リバース'}[v]),result:!num?({pass:'合計そのまま '+total,skip:'次の人を飛ばす・合計 '+total,reverse:'逆回りに・合計 '+total}[v]):'合計 → '+(a>101?a+'（101超え＝負け）':a===101?'101 → 0に戻る':String(a)),pick:()=>{if(s.localChoice)this.act({type:'play',idx:s.localChoice.idx,val:v});else this.act({type:'choose',val:v});this.setState({localChoice:null,sel:null});}};}):[];
     const hand=meP&&meP.hand?meP.hand.map((c,i)=>({...cardOf(c),lift:s.sel===i?'-12px':'0',ring:s.sel===i?gold:'rgba(32,31,29,.25)',tap:()=>this.setState({sel:s.sel===i?null:i})})):[];
     const selCard=meP&&s.sel!=null?meP.hand[s.sel]:null;
     const ev=g&&g.ev;
@@ -939,17 +997,17 @@ class Component extends DCLogic {
       showTest:/^(localhost|127\.0\.0\.1|)$/.test(location.hostname)||new URLSearchParams(location.search).has('test'),
       openTab:()=>{const u=new URL(location.href);u.searchParams.set('join',g?g.room:'');window.open(u.toString(),'_blank');},
       lost,
-      total,pct:Math.min(100,total/101*100)+'%',toGo:Math.max(0,101-total),at100:total===100,
+      total,pct:Math.min(100,total/101*100)+'%',toGo:Math.max(0,101-total),at100:total===100&&o.joker100,
       deckCount:g?(g.deckCount!=null?g.deckCount:(g.deck?g.deck.length:0)):0,
       dirLabel:g&&g.dir===-1?'反時計回り':'時計回り',dirArrow:g&&g.dir===-1?'←':'→',
       seats:players.map((p,i)=>{const cur=playing&&i===g.cur;return{name:p.name,you:p.id===this.me,bd:cur?gold:line,fg:cur?gold:'#b9b4b2',bg:cur?'rgba(225,173,102,.1)':'transparent',arrow:g&&g.dir===-1?'←':'→',notLast:i<players.length-1};}),
       hasTop:!!top,noTop:!top,top:cardOf(top),
       myTurn,notMyTurn:!myTurn,curName:curP?curP.name:'',
-      hand,hasSel:!!selCard,noSel:!selCard,selName:selCard?label(selCard):'',selDesc:selCard?desc(selCard.rank):'',
-      cantPlay:!myTurn||!selCard||unsynced,cantDraw:!myTurn||!!(g&&g.pending)||unsynced,
-      playSelected:()=>{if(!selCard||!myTurn||unsynced)return;if(needsChoice(selCard))this.setState({localChoice:{idx:s.sel,card:selCard}});else{this.act({type:'play',idx:s.sel});this.setState({sel:null});}},
-      drawPlay:()=>myTurn&&!unsynced&&this.act({type:'draw'}),
-      showChoose:!!chCard,ch:cardOf(chCard),chDesc:chCard?desc(chCard.rank):'',chFromDeck:!!(chCard&&!s.localChoice),canCancel:!!s.localChoice,cancelChoose:set({localChoice:null}),opts,
+      hand,hasSel:!!selCard,noSel:!selCard,selName:selCard?label(selCard):'',selDesc:selCard?desc(selCard.rank,o):'',
+      cantPlay:!myTurn||!selCard||unsynced,cantDraw:!myTurn||!!(g&&g.pending)||unsynced||!o.deckPlay,deckPlay:o.deckPlay,
+      playSelected:()=>{if(!selCard||!myTurn||unsynced)return;if(needsChoice(selCard,o))this.setState({localChoice:{idx:s.sel,card:selCard}});else{this.act({type:'play',idx:s.sel});this.setState({sel:null});}},
+      drawPlay:()=>myTurn&&!unsynced&&o.deckPlay&&this.act({type:'draw'}),
+      showChoose:!!chCard,ch:cardOf(chCard),chDesc:chCard?desc(chCard.rank,o):'',chFromDeck:!!(chCard&&!s.localChoice),canCancel:!!s.localChoice,cancelChoose:set({localChoice:null}),opts,
       hasEv:!!ev,
       ev:ev?{...ev,card:cardOf(ev.card),cardName:label(ev.card),byMe:ev.whoId===this.me,how:ev.from==='deck'?'山札から引いて出した':'手札から出した',showMath:ev.kind==='add'||ev.kind==='lose',isPass:ev.kind==='pass',isSkip:ev.kind==='skip',isRev:ev.kind==='reverse',reset:!!ev.reset,special:!!ev.reset||ev.kind==='skip'||ev.kind==='reverse',hasNotes:!!(ev.notes&&ev.notes.length),note:(ev.notes||[]).join('　'),bd:(ev.reset||ev.kind==='skip'||ev.kind==='reverse')?gold:line}:{card:{}},
       toast:s.toast&&!!ev&&playing,
@@ -959,7 +1017,17 @@ class Component extends DCLogic {
       again:()=>this.act({type:'start'}),
       canInstall:!!window.__bip&&!standalone,install:this.install,
       iosHint:!standalone&&(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)),
-      rules:s.rules,openRules:set({rules:true}),closeRules:set({rules:false})
+      rules:s.rules,openRules:set({rules:true}),closeRules:set({rules:false}),
+      // rule switches (lobby) and the rules sheet, both following this room's rules
+      ruleOpts:RULES.map(r=>({label:o[r.k]?r.on:r.off,on:o[r.k],off:!o[r.k],state:o[r.k]?'あり':'なし',mark:o[r.k]?gold:line,fg:o[r.k]?'#f3f2f2':'#9b9797',toggle:()=>this.act({type:'opt',k:r.k})})),
+      ruleSummary:offs.length?'変更あり：'+offs.join('・'):'標準ルール',ruleChanged:offs.length>0,
+      ruleRows:[['A',desc('A',o)],['2–4, 6, 7','数字の分だけ足す'],['5',desc('5',o)],['8',desc('8',o)],['9',desc('9',o)],['10',desc('10',o)],['J · Q · K','+10 · +20 · +30'],['Joker',desc('JK',o)]].map(([name,t])=>({name,text:t.replace(/ を選ぶ$/,'')})),
+      ruleTail:[o.reset101?'ちょうど101なら0に戻って続行。':'ちょうど101はセーフ（そのまま続行）。',o.joker100?'合計100でジョーカーを出せば一人勝ち。':''].join(''),
+      ruleDraw:o.deckPlay?'（山札から引いてそのまま出すことも可）':'',
+      ruleScope:inRoom?(offs.length?'この部屋のルールで表示しています（'+offs.length+'つ変更あり）':'この部屋は標準ルールです'):'標準ルールです。部屋をつくった人がロビーで、ルールのありなしを変えられます',
+      // tied to the round and status it was opened in, so a game starting closes it and it does not come back at the game's end
+      ruleEdit:inRoom&&!playing&&s.ruleEdit===g.round+':'+g.status,openRuleEdit:()=>g&&this.setState({ruleEdit:g.round+':'+g.status}),closeRuleEdit:set({ruleEdit:null}),
+      resetRules:()=>this.act({type:'opt',k:'*'}),ruleEditLabel:isHost?'変更':'見る',ruleSumColor:offs.length?'#f3f2f2':'#b9b4b2'
     };
   }
 }
