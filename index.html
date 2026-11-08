@@ -536,7 +536,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
       <sc-if value="{{ notMeReady }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ setReady }}" style="width:100%;height:54px;border:1px solid #e1ad66;border-radius:4px;background:#e1ad66;color:#1b1918;font:inherit;font-size:17px;font-weight:600;cursor:pointer;">準備OK</button></sc-if>
       <sc-if value="{{ meReady }}" hint-placeholder-val="{{ false }}"><div style="height:54px;display:grid;place-items:center;border:1px solid #e1ad66;border-radius:4px;color:#e1ad66;font-size:15px;">準備OK ― ホストの開始を待っています…</div><button sc-camel-on-click="{{ unReady }}" style="width:100%;height:40px;border:0;background:transparent;color:#b9b4b2;font:inherit;font-size:13px;cursor:pointer;">準備OKを取り消す</button></sc-if>
     </sc-if>
-    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ openRuleEdit }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">ルールを変える</button></sc-if>
+    <button sc-camel-on-click="{{ openRuleEdit }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">{{ ruleOverLabel }}</button>
     <button sc-camel-on-click="{{ leave }}" style="height:48px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;">部屋を出る</button>
   </div>
 </div>
@@ -1063,7 +1063,7 @@ class Component extends DCLogic {
       ruleScope:inRoom?(offs.length?'この部屋のルールで表示しています（'+offs.length+'つ変更あり）':'この部屋は標準ルールです'):'標準ルールです。部屋をつくった人がロビーで、ルールのありなしを変えられます',
       // tied to the round and status it was opened in, so a game starting closes it and it does not come back at the game's end
       ruleEdit:inRoom&&!playing&&s.ruleEdit===g.round+':'+g.status,openRuleEdit:()=>g&&this.setState({ruleEdit:g.round+':'+g.status}),closeRuleEdit:set({ruleEdit:null}),
-      resetRules:()=>this.act({type:'opt',k:'*'}),ruleEditLabel:isHost?'変更':'見る',ruleSumColor:offs.length?'#f3f2f2':'#b9b4b2'
+      resetRules:()=>this.act({type:'opt',k:'*'}),ruleEditLabel:isHost?'変更':'見る',ruleOverLabel:isHost?'ルールを変える':'ルールを見る',ruleSumColor:offs.length?'#f3f2f2':'#b9b4b2'
     };
   }
 }
