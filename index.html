@@ -369,21 +369,10 @@ button:disabled{opacity:.45;cursor:not-allowed;}
       </div>
     </sc-for>
   </div>
-  <div style="display:flex;flex-direction:column;">
-    <div style="display:flex;justify-content:space-between;font-size:12px;color:#b9b4b2;padding-bottom:6px;"><span>この部屋のルール</span><sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><span>タップで ありなし を切り替え</span></sc-if><sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><span>ホストが決めます</span></sc-if></div>
-    <sc-for list="{{ ruleOpts }}" as="r" hint-placeholder-count="8">
-      <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
-        <button sc-camel-on-click="{{ r.toggle }}" aria-pressed="{{ r.on }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:{{ r.fg }};font:inherit;font-size:14px;text-align:left;cursor:pointer;">
-          <span style="flex:1;">{{ r.label }}</span>
-          <span style="width:40px;height:22px;border-radius:11px;border:1px solid {{ r.mark }};position:relative;flex:none;"><sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#e1ad66;"></span></sc-if><sc-if value="{{ r.off }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#7d7979;"></span></sc-if></span>
-          <span style="width:28px;font-size:12px;color:{{ r.mark }};">{{ r.state }}</span>
-        </button>
-      </sc-if>
-      <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid rgba(243,242,242,.16);color:{{ r.fg }};font-size:14px;"><span style="flex:1;">{{ r.label }}</span><span style="font-size:12px;color:{{ r.mark }};">{{ r.state }}</span></div>
-      </sc-if>
-    </sc-for>
-  </div>
+  <button sc-camel-on-click="{{ openRuleEdit }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:#f3f2f2;font:inherit;text-align:left;cursor:pointer;" style-hover="background:rgba(243,242,242,.04);">
+    <span style="flex:1;display:flex;flex-direction:column;gap:3px;"><span style="font-size:12px;color:#b9b4b2;">この部屋のルール</span><span style="font-size:15px;line-height:1.5;color:{{ ruleSumColor }};">{{ ruleSummary }}</span></span>
+    <span style="font-size:13px;color:#e1ad66;white-space:nowrap;">{{ ruleEditLabel }} ›</span>
+  </button>
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
     <button sc-camel-on-click="{{ invite }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">招待リンクを送る</button>
     <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;font-size:12px;color:#e1ad66;">リンクをコピーしました</div></sc-if>
@@ -525,7 +514,7 @@ button:disabled{opacity:.45;cursor:not-allowed;}
     <div style="font-size:12px;line-height:1.7;color:#b9b4b2;">ルール：{{ ruleSummary }}</div>
     <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ again }}" disabled="{{ cantStart }}" style="width:100%;height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">同じメンバーでもう一度</button></sc-if>
     <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="height:54px;display:grid;place-items:center;border:1px solid rgba(243,242,242,.16);border-radius:4px;color:#b9b4b2;font-size:15px;">ホストの再戦を待っています…</div></sc-if>
-    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ toLobby }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">ルールを変える（ロビーへ）</button></sc-if>
+    <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><button sc-camel-on-click="{{ openRuleEdit }}" style="height:48px;border:1px solid rgba(243,242,242,.3);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.06);">ルールを変える</button></sc-if>
     <button sc-camel-on-click="{{ leave }}" style="height:48px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;">部屋を出る</button>
   </div>
 </div>
@@ -549,6 +538,33 @@ button:disabled{opacity:.45;cursor:not-allowed;}
       <button sc-camel-on-click="{{ doLeave }}" style="height:50px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#f3f2f2;font:inherit;font-size:15px;cursor:pointer;" style-hover="background:rgba(243,242,242,.07);">退出してホームへ</button>
     </div>
   </div>
+</div>
+</sc-if>
+<sc-if value="{{ ruleEdit }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:6;background:#1b1918;display:flex;flex-direction:column;gap:14px;padding:20px 24px 28px;overflow:auto;font-family:'Noto Serif JP',serif;">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(243,242,242,.16);padding-bottom:10px;"><span style="font-size:12px;letter-spacing:.2em;color:#e1ad66;">この部屋のルール</span><button sc-camel-on-click="{{ closeRuleEdit }}" style="height:44px;border:0;background:transparent;color:#b9b4b2;font:inherit;font-size:14px;cursor:pointer;">閉じる ✕</button></div>
+  <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;line-height:1.7;color:#b9b4b2;">タップで ありなし を切り替えます。変えるとすぐ全員の画面に反映され、次のゲームから使われます。</div></sc-if>
+  <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.7;color:#b9b4b2;">ルールはホストが決めます。</div></sc-if>
+  <div style="display:flex;flex-direction:column;border-top:1px solid rgba(243,242,242,.16);">
+    <sc-for list="{{ ruleOpts }}" as="r" hint-placeholder-count="8">
+      <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+        <button sc-camel-on-click="{{ r.toggle }}" aria-pressed="{{ r.on }}" style="display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:0;border:0;border-bottom:1px solid rgba(243,242,242,.16);background:transparent;color:{{ r.fg }};font:inherit;font-size:14px;text-align:left;cursor:pointer;">
+          <span style="flex:1;">{{ r.label }}</span>
+          <span style="width:40px;height:22px;border-radius:11px;border:1px solid {{ r.mark }};position:relative;flex:none;"><sc-if value="{{ r.on }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#e1ad66;"></span></sc-if><sc-if value="{{ r.off }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#7d7979;"></span></sc-if></span>
+          <span style="width:28px;font-size:12px;color:{{ r.mark }};">{{ r.state }}</span>
+        </button>
+      </sc-if>
+      <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid rgba(243,242,242,.16);color:{{ r.fg }};font-size:14px;"><span style="flex:1;">{{ r.label }}</span><span style="font-size:12px;color:{{ r.mark }};">{{ r.state }}</span></div>
+      </sc-if>
+    </sc-for>
+  </div>
+  <sc-if value="{{ isHost }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;padding-top:8px;">
+      <sc-if value="{{ ruleChanged }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ resetRules }}" style="height:44px;border:1px solid rgba(243,242,242,.16);border-radius:4px;background:transparent;color:#d7d3d3;font:inherit;font-size:14px;cursor:pointer;">標準ルールに戻す</button></sc-if>
+      <button sc-camel-on-click="{{ closeRuleEdit }}" style="height:54px;border:1px solid #e1ad66;border-radius:4px;background:transparent;color:#e1ad66;font:inherit;font-size:17px;cursor:pointer;" style-hover="background:rgba(225,173,102,.12);">決定</button>
+    </div>
+  </sc-if>
 </div>
 </sc-if>
 <sc-if value="{{ rules }}" hint-placeholder-val="{{ false }}">
@@ -900,12 +916,11 @@ class Component extends DCLogic {
     if(a.type==='start'){if(id!==g.hostId||g.players.length<2)return;const ng=deal(clone(g));ng.handover=null;return this.commit(ng);}
     // the room's rules change only between rounds; the host's choice is remembered for the next room it makes
     if(a.type==='opt'){
-      if(id!==g.hostId||g.status==='playing'||!(a.k in DEF_OPTS))return;
-      const ng=clone(g),o=optsOf(g);ng.opts={...o,[a.k]:!o[a.k]};
+      if(id!==g.hostId||g.status==='playing'||!(a.k in DEF_OPTS||a.k==='*'))return;
+      const ng=clone(g),o=optsOf(g);ng.opts=a.k==='*'?{...DEF_OPTS}:{...o,[a.k]:!o[a.k]};
       try{localStorage.setItem('101-online-opts',JSON.stringify(ng.opts));}catch(e){}
       return this.commit(ng);
     }
-    if(a.type==='lobby'){if(id!==g.hostId||g.status!=='over')return;const ng=clone(g);Object.assign(ng,{status:'lobby',result:null,ev:null,handover:null});return this.commit(ng);}
     if(g.status!=='playing'||g.players[g.cur].id!==id)return;
     const p=g.players[g.cur],o=optsOf(g),ok=(c,v)=>{const ch=choicesFor(c.rank,o);return !ch||ch.length<2||ch.includes(v);};
     if(a.type==='play'){const c=p.hand[a.idx];if(!c||!ok(c,a.val))return;return this.commit(apply(g,c,'hand',a.idx,a.val));}
@@ -1010,7 +1025,9 @@ class Component extends DCLogic {
       ruleTail:[o.reset101?'ちょうど101なら0に戻って続行。':'ちょうど101はセーフ（そのまま続行）。',o.joker100?'合計100でジョーカーを出せば一人勝ち。':''].join(''),
       ruleDraw:o.deckPlay?'（山札から引いてそのまま出すことも可）':'',
       ruleScope:inRoom?(offs.length?'この部屋のルールで表示しています（'+offs.length+'つ変更あり）':'この部屋は標準ルールです'):'標準ルールです。部屋をつくった人がロビーで、ルールのありなしを変えられます',
-      toLobby:()=>this.act({type:'lobby'})
+      // tied to the round and status it was opened in, so a game starting closes it and it does not come back at the game's end
+      ruleEdit:inRoom&&!playing&&s.ruleEdit===g.round+':'+g.status,openRuleEdit:()=>g&&this.setState({ruleEdit:g.round+':'+g.status}),closeRuleEdit:set({ruleEdit:null}),
+      resetRules:()=>this.act({type:'opt',k:'*'}),ruleEditLabel:isHost?'変更':'見る',ruleSumColor:offs.length?'#f3f2f2':'#b9b4b2'
     };
   }
 }
